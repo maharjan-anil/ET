@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cash & Online Expenditure Tracker</title>
+    <title>Expenditure Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -85,6 +85,55 @@
         .modal-header .btn-close {
             filter: brightness(0) invert(1);
         }
+        
+        /* Toggle Animation for Dashboard Cards */
+        .dashboard-card-body {
+            transition: all 0.3s ease-in-out;
+            overflow: hidden;
+        }
+        .dashboard-card-body.collapsed {
+            max-height: 0;
+            padding: 0 !important;
+            opacity: 0;
+        }
+        .dashboard-card-body:not(.collapsed) {
+            max-height: 500px;
+            opacity: 1;
+        }
+        
+        /* Toggle Animation for Settings */
+        #settingsSection {
+            transition: all 0.3s ease-in-out;
+            overflow: hidden;
+        }
+        #settingsSection.collapsed {
+            max-height: 0;
+            padding: 0 !important;
+            opacity: 0;
+        }
+        #settingsSection:not(.collapsed) {
+            max-height: 500px;
+            opacity: 1;
+        }
+        
+        .toggle-btn {
+            transition: transform 0.3s ease;
+            border: none;
+            background: transparent;
+        }
+        .toggle-btn:hover {
+            background: #f8f9fa;
+        }
+        .toggle-btn.rotated {
+            transform: rotate(180deg);
+        }
+        
+        .card-header-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -95,10 +144,17 @@
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title text-success mb-3">
-                        <i class="fas fa-wallet me-2"></i>Cash Wallet
-                    </h5>
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <span class="text-success">
+                            <i class="fas fa-wallet me-2"></i>Cash Wallet
+                        </span>
+                        <button class="btn btn-sm btn-light toggle-btn" onclick="toggleDashboard('cash')" id="toggleCash" title="Show/Hide">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body dashboard-card-body" id="cashDashboardSection">
                     <div class="row g-2">
                         <div class="col-4 stat-box bg-light">
                             <div class="stat-label">Initial</div>
@@ -118,10 +174,17 @@
         </div>
         <div class="col-md-6">
             <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title text-primary mb-3">
-                        <i class="fas fa-credit-card me-2"></i>Online / Card
-                    </h5>
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <span class="text-primary">
+                            <i class="fas fa-credit-card me-2"></i>Online / Card
+                        </span>
+                        <button class="btn btn-sm btn-light toggle-btn" onclick="toggleDashboard('online')" id="toggleOnline" title="Show/Hide">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body dashboard-card-body" id="onlineDashboardSection">
                     <div class="row g-2">
                         <div class="col-4 stat-box bg-light">
                             <div class="stat-label">Initial</div>
@@ -196,12 +259,17 @@
                 </div>
             </div>
 
-            <!-- SETTINGS -->
+            <!-- SETTINGS (With Toggle) -->
             <div class="card mt-3">
-                <div class="card-header bg-light">
-                    <i class="fas fa-cog me-2"></i>Settings (Initial Balance)
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <span><i class="fas fa-cog me-2"></i>Settings (Initial Balance)</span>
+                        <button class="btn btn-sm btn-light toggle-btn" onclick="toggleSettings()" id="toggleSettings" title="Show/Hide Settings">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body" id="settingsSection">
                     <p class="small text-muted mb-3">
                         Enter your starting amounts for Cash and Online.
                     </p>
@@ -334,6 +402,73 @@
     document.getElementById('date').valueAsDate = new Date();
     document.addEventListener('DOMContentLoaded', loadData);
 
+    // 🔽 TOGGLE DASHBOARD FUNCTION (Cash & Online)
+    function toggleDashboard(type) {
+        if(type === 'cash') {
+            const section = document.getElementById('cashDashboardSection');
+            const btn = document.getElementById('toggleCash');
+            section.classList.toggle('collapsed');
+            btn.classList.toggle('rotated');
+            const isCollapsed = section.classList.contains('collapsed');
+            localStorage.setItem('cashDashboardCollapsed', isCollapsed);
+            btn.innerHTML = isCollapsed ? '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-up"></i>';
+        } else if(type === 'online') {
+            const section = document.getElementById('onlineDashboardSection');
+            const btn = document.getElementById('toggleOnline');
+            section.classList.toggle('collapsed');
+            btn.classList.toggle('rotated');
+            const isCollapsed = section.classList.contains('collapsed');
+            localStorage.setItem('onlineDashboardCollapsed', isCollapsed);
+            btn.innerHTML = isCollapsed ? '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-up"></i>';
+        }
+    }
+
+    // 🔽 TOGGLE SETTINGS FUNCTION
+    function toggleSettings() {
+        const settingsSection = document.getElementById('settingsSection');
+        const toggleBtn = document.getElementById('toggleSettings');
+        
+        settingsSection.classList.toggle('collapsed');
+        toggleBtn.classList.toggle('rotated');
+        
+        const isCollapsed = settingsSection.classList.contains('collapsed');
+        localStorage.setItem('settingsCollapsed', isCollapsed);
+        
+        toggleBtn.innerHTML = isCollapsed ? 
+            '<i class="fas fa-chevron-down"></i>' : 
+            '<i class="fas fa-chevron-up"></i>';
+    }
+
+    // Load saved toggle states for all sections
+    function loadToggleStates() {
+        // Cash Dashboard
+        const cashCollapsed = localStorage.getItem('cashDashboardCollapsed') === 'true';
+        const cashSection = document.getElementById('cashDashboardSection');
+        const cashBtn = document.getElementById('toggleCash');
+        if(cashCollapsed) {
+            cashSection.classList.add('collapsed');
+            cashBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        }
+
+        // Online Dashboard
+        const onlineCollapsed = localStorage.getItem('onlineDashboardCollapsed') === 'true';
+        const onlineSection = document.getElementById('onlineDashboardSection');
+        const onlineBtn = document.getElementById('toggleOnline');
+        if(onlineCollapsed) {
+            onlineSection.classList.add('collapsed');
+            onlineBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        }
+
+        // Settings
+        const settingsCollapsed = localStorage.getItem('settingsCollapsed') === 'true';
+        const settingsSection = document.getElementById('settingsSection');
+        const settingsBtn = document.getElementById('toggleSettings');
+        if(settingsCollapsed) {
+            settingsSection.classList.add('collapsed');
+            settingsBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        }
+    }
+
     function loadData() {
         const tbody = document.getElementById('expenseTableBody');
         tbody.innerHTML = `
@@ -344,7 +479,7 @@
                 </td>
             </tr>`;
 
-        fetch(scriptURL)
+        fetch(scriptURL + '?t=' + new Date().getTime())
             .then(res => res.json())
             .then(response => {
                 if(response.result === 'success') {
@@ -352,6 +487,7 @@
                     renderTable(response.data);
                     document.getElementById('configInitCash').value = response.config.initialCash || 0;
                     document.getElementById('configInitOnline').value = response.config.initialOnline || 0;
+                    loadToggleStates(); // Load all saved toggle states
                 } else {
                     tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${response.error}</td></tr>`;
                 }
@@ -440,7 +576,6 @@
         const formData = new FormData();
         
         if(editRowId) {
-            // Update existing
             formData.append('action', 'updateExpense');
             formData.append('rowId', editRowId);
             formData.append('date', document.getElementById('date').value);
@@ -448,7 +583,6 @@
             formData.append('type', document.getElementById('editType').value);
             formData.append('amount', document.getElementById('editType').value === 'Cash' ? cashAmount : onlineAmount);
         } else {
-            // New expense
             formData.append('date', document.getElementById('date').value);
             formData.append('description', document.getElementById('description').value);
             formData.append('cashAmount', cashAmount);
@@ -487,102 +621,88 @@
         new bootstrap.Modal(document.getElementById('editModal')).show();
     }
 
-    // CONFIRM DELETE (Updated with Force Refresh)
-function confirmDelete() {
-    const rowId = document.getElementById('deleteModalRowId').value;
-    const deleteBtn = event.target;
-    
-    console.log('Deleting row with ID:', rowId);
-    
-    // Disable button to prevent double-click
-    deleteBtn.disabled = true;
-    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Deleting...';
-    
-    const formData = new FormData();
-    formData.append('action', 'deleteExpense');
-    formData.append('rowId', rowId);
+    // CONFIRM EDIT
+    function confirmEdit() {
+        const rowId = document.getElementById('editModalRowId').value;
+        const date = document.getElementById('editModalDate').value;
+        const description = document.getElementById('editModalDescription').value;
+        const type = document.getElementById('editModalType').value;
+        const amount = document.getElementById('editModalAmount').value;
+        
+        const formData = new FormData();
+        formData.append('action', 'updateExpense');
+        formData.append('rowId', rowId);
+        formData.append('date', date);
+        formData.append('description', description);
+        formData.append('type', type);
+        formData.append('amount', amount);
 
-    fetch(scriptURL, { method: 'POST', body: formData })
-        .then(response => {
-            console.log('Delete response status:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('Delete response:', data);
-            
-            if(data.result === 'success') {
-                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-                showStatus('✓ Expense deleted successfully!', 'success');
-                
-                // Force refresh with delay
-                setTimeout(() => {
+        fetch(scriptURL, { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if(data.result === 'success') {
+                    bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                    showStatus('✓ Expense updated successfully!', 'success');
                     loadData();
-                }, 500);
-            } else {
-                alert('✗ Error: ' + (data.error || 'Unknown error'));
-                console.error('Delete failed:', data.error);
-            }
-        })
-        .catch(err => {
-            alert('✗ Connection Error: ' + err.message);
-            console.error('Delete error:', err);
-        })
-        .finally(() => {
-            // Re-enable button
-            deleteBtn.disabled = false;
-            deleteBtn.innerHTML = '<i class="fas fa-trash me-1"></i> Delete';
-        });
-}
+                } else {
+                    alert('✗ Error: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('✗ Connection Error: ' + err.message);
+            });
+    }
 
     // OPEN DELETE MODAL
-function openDeleteModal(id) {
-    console.log('Opening delete modal for ID:', id);
-    document.getElementById('deleteModalRowId').value = id;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
+    function openDeleteModal(id) {
+        console.log('Opening delete modal for ID:', id);
+        document.getElementById('deleteModalRowId').value = id;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
 
-// CONFIRM DELETE
-function confirmDelete() {
-    const rowId = document.getElementById('deleteModalRowId').value;
-    const deleteBtn = event.target;
-    
-    console.log('Deleting row with ID:', rowId);
-    
-    // Disable button to prevent double-click
-    deleteBtn.disabled = true;
-    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Deleting...';
-    
-    const formData = new FormData();
-    formData.append('action', 'deleteExpense');
-    formData.append('rowId', rowId);
+    // CONFIRM DELETE (With Force Refresh)
+    function confirmDelete() {
+        const rowId = document.getElementById('deleteModalRowId').value;
+        const deleteBtn = event.target;
+        
+        console.log('Deleting row with ID:', rowId);
+        
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Deleting...';
+        
+        const formData = new FormData();
+        formData.append('action', 'deleteExpense');
+        formData.append('rowId', rowId);
 
-    fetch(scriptURL, { method: 'POST', body: formData })
-        .then(response => {
-            console.log('Delete response status:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('Delete response:', data);
-            
-            if(data.result === 'success') {
-                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-                showStatus('✓ Expense deleted successfully!', 'success');
-                loadData(); // Refresh the table
-            } else {
-                alert('✗ Error: ' + (data.error || 'Unknown error'));
-                console.error('Delete failed:', data.error);
-            }
-        })
-        .catch(err => {
-            alert('✗ Connection Error: ' + err.message);
-            console.error('Delete error:', err);
-        })
-        .finally(() => {
-            // Re-enable button
-            deleteBtn.disabled = false;
-            deleteBtn.innerHTML = '<i class="fas fa-trash me-1"></i> Delete';
-        });
-}
+        fetch(scriptURL, { method: 'POST', body: formData })
+            .then(response => {
+                console.log('Delete response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Delete response:', data);
+                
+                if(data.result === 'success') {
+                    bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                    showStatus('✓ Expense deleted successfully!', 'success');
+                    
+                    setTimeout(() => {
+                        loadData();
+                    }, 500);
+                } else {
+                    alert('✗ Error: ' + (data.error || 'Unknown error'));
+                    console.error('Delete failed:', data.error);
+                }
+            })
+            .catch(err => {
+                alert('✗ Connection Error: ' + err.message);
+                console.error('Delete error:', err);
+            })
+            .finally(() => {
+                deleteBtn.disabled = false;
+                deleteBtn.innerHTML = '<i class="fas fa-trash me-1"></i> Delete';
+            });
+    }
 
     // SAVE CONFIG
     function saveConfig() {
