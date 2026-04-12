@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cash & Online Expenditure Tracker</title>
+    <title> Expenditure Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -86,32 +86,17 @@
             filter: brightness(0) invert(1);
         }
         
-        /* Toggle Animation for Dashboard Cards */
-        .dashboard-card-body {
+        /* Toggle Animation */
+        .dashboard-card-body, #settingsSection, #monthlyConfigSection {
             transition: all 0.3s ease-in-out;
             overflow: hidden;
         }
-        .dashboard-card-body.collapsed {
+        .dashboard-card-body.collapsed, #settingsSection.collapsed, #monthlyConfigSection.collapsed {
             max-height: 0;
             padding: 0 !important;
             opacity: 0;
         }
-        .dashboard-card-body:not(.collapsed) {
-            max-height: 500px;
-            opacity: 1;
-        }
-        
-        /* Toggle Animation for Settings */
-        #settingsSection {
-            transition: all 0.3s ease-in-out;
-            overflow: hidden;
-        }
-        #settingsSection.collapsed {
-            max-height: 0;
-            padding: 0 !important;
-            opacity: 0;
-        }
-        #settingsSection:not(.collapsed) {
+        .dashboard-card-body:not(.collapsed), #settingsSection:not(.collapsed), #monthlyConfigSection:not(.collapsed) {
             max-height: 500px;
             opacity: 1;
         }
@@ -152,6 +137,12 @@
         .month-summary .summary-value {
             font-size: 1.8rem;
             font-weight: bold;
+        }
+        
+        /* Monthly Config Section */
+        .monthly-config-card {
+            background: #fff;
+            border-left: 4px solid #667eea;
         }
     </style>
 </head>
@@ -278,11 +269,47 @@
                 </div>
             </div>
 
+            <!-- MONTHLY CONFIG (New Section) -->
+            <div class="card mt-3 monthly-config-card">
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <span><i class="fas fa-calendar-alt me-2"></i>Monthly Initial Balance</span>
+                        <button class="btn btn-sm btn-light toggle-btn" onclick="toggleMonthlyConfig()" id="toggleMonthlyConfig" title="Show/Hide">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" id="monthlyConfigSection">
+                    <p class="small text-muted mb-3">
+                        Set initial balance for each month period (10th to 9th)
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small">Select Month Period</label>
+                        <select class="form-select form-select-sm" id="monthlyConfigPeriod" onchange="loadMonthlyConfigValues()">
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small">Start Cash (Rs.)</label>
+                            <input type="number" class="form-control form-control-sm" id="monthlyInitCash" placeholder="0.00" step="0.01">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">Start Online (Rs.)</label>
+                            <input type="number" class="form-control form-control-sm" id="monthlyInitOnline" placeholder="0.00" step="0.01">
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary w-100 mt-3" onclick="saveMonthlyConfig()">
+                        <i class="fas fa-save me-1"></i> Save Monthly Balance
+                    </button>
+                </div>
+            </div>
+
             <!-- SETTINGS (With Toggle) -->
             <div class="card mt-3">
                 <div class="card-header">
                     <div class="card-header-title">
-                        <span><i class="fas fa-cog me-2"></i>Settings (Initial Balance)</span>
+                        <span><i class="fas fa-cog me-2"></i>Settings (Global Initial Balance)</span>
                         <button class="btn btn-sm btn-light toggle-btn" onclick="toggleSettings()" id="toggleSettings" title="Show/Hide Settings">
                             <i class="fas fa-chevron-down"></i>
                         </button>
@@ -290,7 +317,7 @@
                 </div>
                 <div class="card-body" id="settingsSection">
                     <p class="small text-muted mb-3">
-                        Enter your starting amounts for Cash and Online.
+                        Global initial balance (used when no monthly balance is set)
                     </p>
                     <div class="row g-2">
                         <div class="col-6">
@@ -303,7 +330,7 @@
                         </div>
                     </div>
                     <button class="btn btn-sm btn-outline-secondary w-100 mt-3" onclick="saveConfig()">
-                        <i class="fas fa-save me-1"></i> Update Initial Balances
+                        <i class="fas fa-save me-1"></i> Update Global Balances
                     </button>
                 </div>
             </div>
@@ -339,7 +366,7 @@
                         </div>
                     </div>
 
-                    <!-- Month Summary (Cash & Online Only - No Total) -->
+                    <!-- Month Summary -->
                     <div class="month-summary d-none" id="monthSummary">
                         <div class="row">
                             <div class="col-6 text-center">
@@ -449,16 +476,17 @@
 
 <script>
     // ================= CONFIGURATION =================
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbyzu0ozRmwOzXrW0OmdYlrDo7UdjDC9USIMMfSSqTCKF1byneNFh3-TVO2ZIlVbcaiD8A/exec'; 
+    const scriptURL = 'YOUR_GOOGLE_SCRIPT_WEB_APP_URL'; 
     // =================================================
 
-    // Global variable to store all transactions
     let allTransactions = [];
+    let monthlyConfigData = [];
+    let currentMonthPeriod = '';
 
     document.getElementById('date').valueAsDate = new Date();
     document.addEventListener('DOMContentLoaded', loadData);
 
-    // 🔽 HELPER: Format Date to YYYY-MM-DD (Local Time, No Timezone Issue)
+    // Helper: Format Date to YYYY-MM-DD (Local Time)
     function formatDateLocal(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -466,13 +494,7 @@
         return `${year}-${month}-${day}`;
     }
 
-    // 🔽 HELPER: Parse Date String to Date Object (Local Time)
-    function parseDateLocal(dateString) {
-        const parts = dateString.split('-');
-        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    }
-
-    // 🔽 TOGGLE DASHBOARD FUNCTION (Cash & Online)
+    // Toggle Functions
     function toggleDashboard(type) {
         if(type === 'cash') {
             const section = document.getElementById('cashDashboardSection');
@@ -493,110 +515,132 @@
         }
     }
 
-    // 🔽 TOGGLE SETTINGS FUNCTION
     function toggleSettings() {
         const settingsSection = document.getElementById('settingsSection');
         const toggleBtn = document.getElementById('toggleSettings');
-        
         settingsSection.classList.toggle('collapsed');
         toggleBtn.classList.toggle('rotated');
-        
         const isCollapsed = settingsSection.classList.contains('collapsed');
         localStorage.setItem('settingsCollapsed', isCollapsed);
-        
-        toggleBtn.innerHTML = isCollapsed ? 
-            '<i class="fas fa-chevron-down"></i>' : 
-            '<i class="fas fa-chevron-up"></i>';
+        toggleBtn.innerHTML = isCollapsed ? '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-up"></i>';
     }
 
-    // Load saved toggle states for all sections
+    function toggleMonthlyConfig() {
+        const section = document.getElementById('monthlyConfigSection');
+        const btn = document.getElementById('toggleMonthlyConfig');
+        section.classList.toggle('collapsed');
+        btn.classList.toggle('rotated');
+        const isCollapsed = section.classList.contains('collapsed');
+        localStorage.setItem('monthlyConfigCollapsed', isCollapsed);
+        btn.innerHTML = isCollapsed ? '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-up"></i>';
+    }
+
     function loadToggleStates() {
         const cashCollapsed = localStorage.getItem('cashDashboardCollapsed') === 'true';
-        const cashSection = document.getElementById('cashDashboardSection');
-        const cashBtn = document.getElementById('toggleCash');
         if(cashCollapsed) {
-            cashSection.classList.add('collapsed');
-            cashBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+            document.getElementById('cashDashboardSection').classList.add('collapsed');
+            document.getElementById('toggleCash').innerHTML = '<i class="fas fa-chevron-down"></i>';
         }
 
         const onlineCollapsed = localStorage.getItem('onlineDashboardCollapsed') === 'true';
-        const onlineSection = document.getElementById('onlineDashboardSection');
-        const onlineBtn = document.getElementById('toggleOnline');
         if(onlineCollapsed) {
-            onlineSection.classList.add('collapsed');
-            onlineBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+            document.getElementById('onlineDashboardSection').classList.add('collapsed');
+            document.getElementById('toggleOnline').innerHTML = '<i class="fas fa-chevron-down"></i>';
         }
 
         const settingsCollapsed = localStorage.getItem('settingsCollapsed') === 'true';
-        const settingsSection = document.getElementById('settingsSection');
-        const settingsBtn = document.getElementById('toggleSettings');
         if(settingsCollapsed) {
-            settingsSection.classList.add('collapsed');
-            settingsBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+            document.getElementById('settingsSection').classList.add('collapsed');
+            document.getElementById('toggleSettings').innerHTML = '<i class="fas fa-chevron-down"></i>';
+        }
+
+        const monthlyCollapsed = localStorage.getItem('monthlyConfigCollapsed') === 'true';
+        if(monthlyCollapsed) {
+            document.getElementById('monthlyConfigSection').classList.add('collapsed');
+            document.getElementById('toggleMonthlyConfig').innerHTML = '<i class="fas fa-chevron-down"></i>';
         }
     }
 
-    // 📅 Generate Month Options for Year 2026 Only (10th to 9th) - FIXED WITH LOCAL DATES
+    // ✅ KEY FIX: Generate dropdowns from sheet data (exact match)
     function generateMonthOptions() {
         const monthFilter = document.getElementById('monthFilter');
-        const year = 2026;
-        const options = [];
-
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthlyConfigSelect = document.getElementById('monthlyConfigPeriod');
         
-        // Create 12 periods for 2026 (each period is 10th of month to 9th of next month)
-        for(let i = 0; i < 12; i++) {
-            // Start date: 10th of current month
-            const startDate = new Date(year, i, 10);
-            // End date: 9th of NEXT month
-            const endDate = new Date(year, i + 1, 9);
-            
-            // Format dates as YYYY-MM-DD (local time, no timezone shift)
-            const startDateStr = formatDateLocal(startDate);
-            const endDateStr = formatDateLocal(endDate);
-            
-            const startMonth = monthNames[startDate.getMonth()];
-            const startYear = startDate.getFullYear().toString().substr(-2);
-            const endMonth = monthNames[endDate.getMonth()];
-            const endYear = endDate.getFullYear().toString().substr(-2);
-            
-            const label = `${startMonth} ${startYear} - ${endMonth} ${endYear}`;
-            const value = `${startDateStr}|${endDateStr}`;
-            
-            options.push({ label, value, startDateStr, endDateStr });
-        }
-
-        // Clear existing options (keep "All Transactions")
+        // Clear existing options
         monthFilter.innerHTML = '<option value="all">All Transactions</option>';
+        monthlyConfigSelect.innerHTML = '<option value="">Select Month Period...</option>';
         
-        // Add month options
-        options.forEach(opt => {
-            const option = document.createElement('option');
-            option.value = opt.value;
-            option.textContent = opt.label;
-            option.dataset.start = opt.startDateStr;
-            option.dataset.end = opt.endDateStr;
-            monthFilter.appendChild(option);
+        // Use period names DIRECTLY from monthlyConfigData (from sheet)
+        monthlyConfigData.forEach((config, index) => {
+            const period = config.period;
+            
+            // Extract dates from period name for filtering
+            const dates = extractDatesFromPeriod(period);
+            
+            // Add to filter dropdown
+            const filterOption = document.createElement('option');
+            filterOption.value = dates.start + '|' + dates.end;
+            filterOption.textContent = period;
+            filterOption.dataset.start = dates.start;
+            filterOption.dataset.end = dates.end;
+            monthFilter.appendChild(filterOption);
+            
+            // Add to monthly config dropdown
+            const configOption = document.createElement('option');
+            configOption.value = period;
+            configOption.textContent = period;
+            monthlyConfigSelect.appendChild(configOption);
         });
 
-        // Set current period as default (find period that contains today)
+        // Set current period as default
         const todayStr = formatDateLocal(new Date());
-        
         let foundCurrent = false;
-        options.forEach(opt => {
-            if(todayStr >= opt.startDateStr && todayStr <= opt.endDateStr) {
-                monthFilter.value = opt.value;
+        
+        monthlyConfigData.forEach((config, index) => {
+            const dates = extractDatesFromPeriod(config.period);
+            if(todayStr >= dates.start && todayStr <= dates.end) {
+                monthFilter.value = dates.start + '|' + dates.end;
                 foundCurrent = true;
+                currentMonthPeriod = config.period;
             }
         });
         
-        // If today is not in 2026, default to first option
-        if(!foundCurrent && options.length > 0) {
-            monthFilter.value = options[0].value;
+        if(!foundCurrent && monthlyConfigData.length > 0) {
+            const firstDates = extractDatesFromPeriod(monthlyConfigData[0].period);
+            monthFilter.value = firstDates.start + '|' + firstDates.end;
+            currentMonthPeriod = monthlyConfigData[0].period;
         }
     }
 
-    // 📅 Filter Transactions by Month - FIXED WITH LOCAL DATE COMPARISON
+    // ✅ Helper: Extract dates from period name (e.g., "Feb 26 - Mar 26" -> 2026-02-10, 2026-03-09)
+    function extractDatesFromPeriod(period) {
+        const monthNames = {
+            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+        };
+        
+        // Parse period like "Feb 26 - Mar 26"
+        const parts = period.split(' - ');
+        const startParts = parts[0].split(' ');
+        const endParts = parts[1].split(' ');
+        
+        const startMonth = monthNames[startParts[0]];
+        const startYear = 2000 + parseInt(startParts[1]);
+        const endMonth = monthNames[endParts[0]];
+        const endYear = 2000 + parseInt(endParts[1]);
+        
+        // Start date: 10th of start month
+        const startDate = new Date(startYear, startMonth, 10);
+        // End date: 9th of end month
+        const endDate = new Date(endYear, endMonth, 9);
+        
+        return {
+            start: formatDateLocal(startDate),
+            end: formatDateLocal(endDate)
+        };
+    }
+
+    // Filter by Month
     function filterByMonth() {
         const monthFilter = document.getElementById('monthFilter');
         const selectedOption = monthFilter.options[monthFilter.selectedIndex];
@@ -605,77 +649,149 @@
         if(monthFilter.value === 'all') {
             renderTable(allTransactions);
             summarySection.classList.add('d-none');
+            const globalConfig = { 
+                initialCash: parseFloat(document.getElementById('configInitCash').value) || 0, 
+                initialOnline: parseFloat(document.getElementById('configInitOnline').value) || 0 
+            };
+            renderDashboardWithConfig(globalConfig, allTransactions);
             return;
         }
 
-        // Get dates from data attributes (YYYY-MM-DD format)
+        currentMonthPeriod = selectedOption.textContent;
         const startDate = selectedOption.dataset.start;
         const endDate = selectedOption.dataset.end;
 
-        console.log('Filtering from', startDate, 'to', endDate);
-
         const filtered = allTransactions.filter(row => {
-            // Parse the row date and format it as YYYY-MM-DD (local time)
             const rowDateObj = new Date(row.Date);
             const rowDateStr = formatDateLocal(rowDateObj);
-            
-            console.log('Row date:', rowDateStr, 'Row desc:', row.Description);
-            
-            // Compare as strings (YYYY-MM-DD format compares correctly)
             return rowDateStr >= startDate && rowDateStr <= endDate;
         });
 
-        console.log('Filtered count:', filtered.length);
         renderTable(filtered);
         showMonthSummary(filtered, startDate, endDate);
+        
+        // Get monthly config for this period
+        const monthlyConfig = monthlyConfigData.find(m => m.period === currentMonthPeriod);
+        if(monthlyConfig) {
+            renderDashboardWithConfig(monthlyConfig, filtered);
+        } else {
+            const globalConfig = { 
+                initialCash: parseFloat(document.getElementById('configInitCash').value) || 0, 
+                initialOnline: parseFloat(document.getElementById('configInitOnline').value) || 0 
+            };
+            renderDashboardWithConfig(globalConfig, filtered);
+        }
     }
 
-    // 📊 Show Month Summary (Cash & Online Only - No Total)
+    // Load Monthly Config Values
+    function loadMonthlyConfigValues() {
+        const period = document.getElementById('monthlyConfigPeriod').value;
+        console.log('Loading config for period:', period);
+        
+        const config = monthlyConfigData.find(m => m.period === period);
+        
+        if(config) {
+            console.log('Found config:', config);
+            document.getElementById('monthlyInitCash').value = config.initialCash;
+            document.getElementById('monthlyInitOnline').value = config.initialOnline;
+        } else {
+            document.getElementById('monthlyInitCash').value = 0;
+            document.getElementById('monthlyInitOnline').value = 0;
+        }
+    }
+
+    // Save Monthly Config
+    function saveMonthlyConfig() {
+        const period = document.getElementById('monthlyConfigPeriod').value;
+        if(!period) {
+            alert('Please select a month period');
+            return;
+        }
+        
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+        btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('action', 'updateMonthlyConfig');
+        formData.append('period', period);
+        formData.append('initialCash', document.getElementById('monthlyInitCash').value || 0);
+        formData.append('initialOnline', document.getElementById('monthlyInitOnline').value || 0);
+
+        console.log('Sending monthly config:', {
+            action: 'updateMonthlyConfig',
+            period: period,
+            initialCash: document.getElementById('monthlyInitCash').value,
+            initialOnline: document.getElementById('monthlyInitOnline').value
+        });
+
+        fetch(scriptURL, { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Response:', data);
+                if(data.result === 'success') {
+                    alert('✓ Monthly balance updated for ' + period + '!');
+                    loadData();
+                } else {
+                    alert('✗ Error: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('✗ Connection Error: ' + err.message);
+            })
+            .finally(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+    }
+
+    // Show Month Summary
     function showMonthSummary(data, startDate, endDate) {
         const summarySection = document.getElementById('monthSummary');
-        
         let cashSpent = 0;
         let onlineSpent = 0;
 
         data.forEach(row => {
-            if(row.Type === 'Cash') {
-                cashSpent += parseFloat(row.Amount) || 0;
-            } else if(row.Type === 'Online') {
-                onlineSpent += parseFloat(row.Amount) || 0;
-            }
+            if(row.Type === 'Cash') cashSpent += parseFloat(row.Amount) || 0;
+            else if(row.Type === 'Online') onlineSpent += parseFloat(row.Amount) || 0;
         });
 
         document.getElementById('summaryCash').textContent = 'Rs. ' + cashSpent.toFixed(2);
         document.getElementById('summaryOnline').textContent = 'Rs. ' + onlineSpent.toFixed(2);
-
         summarySection.classList.remove('d-none');
     }
 
-    // 🔄 Reset Filter
+    // Reset Filter
     function resetFilter() {
         document.getElementById('monthFilter').value = 'all';
+        currentMonthPeriod = '';
         renderTable(allTransactions);
         document.getElementById('monthSummary').classList.add('d-none');
+        const globalConfig = { 
+            initialCash: parseFloat(document.getElementById('configInitCash').value) || 0, 
+            initialOnline: parseFloat(document.getElementById('configInitOnline').value) || 0 
+        };
+        renderDashboardWithConfig(globalConfig, allTransactions);
     }
 
+    // Load Data
     function loadData() {
         const tbody = document.getElementById('expenseTableBody');
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="small mt-2 text-muted">Fetching data...</p>
-                </td>
-            </tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="small mt-2 text-muted">Fetching data...</p></td></tr>`;
 
         fetch(scriptURL + '?t=' + new Date().getTime())
             .then(res => res.json())
             .then(response => {
+                console.log('Full response:', response);
                 if(response.result === 'success') {
                     allTransactions = response.data;
-                    renderDashboard(response.config, response.data);
+                    monthlyConfigData = response.monthlyConfig || [];
                     
-                    generateMonthOptions();
+                    console.log('Monthly config loaded:', monthlyConfigData);
+                    
+                    renderDashboardWithConfig(response.config, response.data);
+                    generateMonthOptions(); // Now uses sheet data
                     filterByMonth();
                     
                     document.getElementById('configInitCash').value = response.config.initialCash || 0;
@@ -690,7 +806,8 @@
             });
     }
 
-    function renderDashboard(config, data) {
+    // Render Dashboard with Config
+    function renderDashboardWithConfig(config, data) {
         let spentCash = 0, spentOnline = 0;
 
         data.forEach(row => {
@@ -710,6 +827,7 @@
         document.getElementById('dashRemOnline').textContent = 'Rs. ' + (initOnline - spentOnline).toFixed(2);
     }
 
+    // Render Table
     function renderTable(data) {
         const tbody = document.getElementById('expenseTableBody');
         tbody.innerHTML = '';
@@ -748,7 +866,6 @@
     // SAVE NEW EXPENSE
     document.getElementById('expenseForm').addEventListener('submit', e => {
         e.preventDefault();
-        
         const cashAmount = document.getElementById('cashAmount').value;
         const onlineAmount = document.getElementById('onlineAmount').value;
         const editRowId = document.getElementById('editRowId').value;
@@ -803,32 +920,24 @@
             });
     });
 
-    // OPEN EDIT MODAL
     function openEditModal(id, date, description, type, amount) {
         document.getElementById('editModalRowId').value = id;
         document.getElementById('editModalDate').value = new Date(date).toISOString().split('T')[0];
         document.getElementById('editModalDescription').value = description;
         document.getElementById('editModalType').value = type;
         document.getElementById('editModalAmount').value = amount;
-        
         new bootstrap.Modal(document.getElementById('editModal')).show();
     }
 
-    // CONFIRM EDIT
     function confirmEdit() {
         const rowId = document.getElementById('editModalRowId').value;
-        const date = document.getElementById('editModalDate').value;
-        const description = document.getElementById('editModalDescription').value;
-        const type = document.getElementById('editModalType').value;
-        const amount = document.getElementById('editModalAmount').value;
-        
         const formData = new FormData();
         formData.append('action', 'updateExpense');
         formData.append('rowId', rowId);
-        formData.append('date', date);
-        formData.append('description', description);
-        formData.append('type', type);
-        formData.append('amount', amount);
+        formData.append('date', document.getElementById('editModalDate').value);
+        formData.append('description', document.getElementById('editModalDescription').value);
+        formData.append('type', document.getElementById('editModalType').value);
+        formData.append('amount', document.getElementById('editModalAmount').value);
 
         fetch(scriptURL, { method: 'POST', body: formData })
             .then(response => response.json())
@@ -841,25 +950,17 @@
                     alert('✗ Error: ' + (data.error || 'Unknown error'));
                 }
             })
-            .catch(err => {
-                alert('✗ Connection Error: ' + err.message);
-            });
+            .catch(err => alert('✗ Connection Error: ' + err.message));
     }
 
-    // OPEN DELETE MODAL
     function openDeleteModal(id) {
-        console.log('Opening delete modal for ID:', id);
         document.getElementById('deleteModalRowId').value = id;
         new bootstrap.Modal(document.getElementById('deleteModal')).show();
     }
 
-    // CONFIRM DELETE (With Force Refresh)
     function confirmDelete() {
         const rowId = document.getElementById('deleteModalRowId').value;
         const deleteBtn = event.target;
-        
-        console.log('Deleting row with ID:', rowId);
-        
         deleteBtn.disabled = true;
         deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Deleting...';
         
@@ -868,67 +969,57 @@
         formData.append('rowId', rowId);
 
         fetch(scriptURL, { method: 'POST', body: formData })
-            .then(response => {
-                console.log('Delete response status:', response.status);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Delete response:', data);
-                
                 if(data.result === 'success') {
                     bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
                     showStatus('✓ Expense deleted successfully!', 'success');
-                    
-                    setTimeout(() => {
-                        loadData();
-                    }, 500);
+                    setTimeout(() => loadData(), 500);
                 } else {
                     alert('✗ Error: ' + (data.error || 'Unknown error'));
-                    console.error('Delete failed:', data.error);
                 }
             })
-            .catch(err => {
-                alert('✗ Connection Error: ' + err.message);
-                console.error('Delete error:', err);
-            })
+            .catch(err => alert('✗ Connection Error: ' + err.message))
             .finally(() => {
                 deleteBtn.disabled = false;
                 deleteBtn.innerHTML = '<i class="fas fa-trash me-1"></i> Delete';
             });
     }
 
-    // SAVE CONFIG
     function saveConfig() {
         const btn = event.target;
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Updating...';
         btn.disabled = true;
 
+        const initialCash = parseFloat(document.getElementById('configInitCash').value) || 0;
+        const initialOnline = parseFloat(document.getElementById('configInitOnline').value) || 0;
+
+        console.log('Saving global config:', { initialCash, initialOnline });
+
         const formData = new FormData();
         formData.append('action', 'updateConfig');
-        formData.append('initialCash', document.getElementById('configInitCash').value || 0);
-        formData.append('initialOnline', document.getElementById('configInitOnline').value || 0);
+        formData.append('initialCash', initialCash);
+        formData.append('initialOnline', initialOnline);
 
         fetch(scriptURL, { method: 'POST', body: formData })
             .then(response => response.json())
             .then(data => {
+                console.log('Global config response:', data);
                 if(data.result === 'success') {
-                    alert('✓ Initial balances updated!');
+                    alert('✓ Global initial balances updated!');
                     loadData();
                 } else {
                     alert('✗ Error: ' + (data.error || 'Unknown error'));
                 }
             })
-            .catch(err => {
-                alert('✗ Connection Error: ' + err.message);
-            })
+            .catch(err => alert('✗ Connection Error: ' + err.message))
             .finally(() => {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             });
     }
 
-    // HELPER FUNCTIONS
     function showStatus(message, type) {
         const msg = document.getElementById('statusMessage');
         msg.textContent = message;
